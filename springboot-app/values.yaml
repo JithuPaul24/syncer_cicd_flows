@@ -8,7 +8,7 @@ image:
   repository: registry.hub.docker.com/library/jithupaul24/springboot-poc
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "MY_QA_TAG"
+  tag: "1.0-20240403-195720"
 
 imagePullSecrets: []
 nameOverride: ""
