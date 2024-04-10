@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: argocd-env-configmap
-data:
-  ARGOCD_SERVER: https://10.109.189.244:443/
-  ARGOCD_APPLICATION_NAME: tekton-pipeline-app
-  ARGOCD_APPLICATION_REVISION: tekton

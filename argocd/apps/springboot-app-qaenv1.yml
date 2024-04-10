@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: springboot-app-qaenv1
+  namespace: argocd
+spec:
+  destination:
+    namespace: qaenv1
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: springboot-app/
+    repoURL: https://github.com/JithuPaul24/syncer_cicd_flows.git
+    targetRevision: qaenv1
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+    automated:
+      selfHeal: true
+      prune: true
