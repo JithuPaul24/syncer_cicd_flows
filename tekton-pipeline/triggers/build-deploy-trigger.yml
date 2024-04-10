@@ -1,0 +1,77 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: github-push-trigger-template
+spec:
+  params:
+  - name: gitrevision
+    description: The commit ID.
+  - name: gitrepositoryurl
+    description: The repository URL.
+  # Add more parameters as needed
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+      generateName: tekton-pipeline-habsng-master-run-
+      namespace: tekton-pipeline-habsng
+      labels: 
+         pipeline: tekton
+         deploy: argocd
+    spec:
+      serviceAccountName: pipeline-sa
+      pipelineRef:
+        name: springboot-gradle-kaniko1
+      podTemplate:
+        securityContext:
+          fsGroup: 65532
+      workspaces:
+      - name: shared-data
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+            - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+      - name: dockerconfig
+        secret:
+          secretName: basic-docker-user-pass
+      params:
+      - name: gitrevision
+        value: $(params.gitrevision)
+      - name: gitrepositoryurl
+        value: ${params.gitrepositoryurl}
+      - name: GRADLE_IMAGE
+        value: gradle:8.6.0-jdk21
+      - name: DOCKER_IMAGE
+        value: "jithupaul24/springboot-poc"
+
+--- 
+
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: github-push-trigger-binding
+spec:
+  params:
+  - name: gitrevision
+    value: $(body.head_commit.id)
+  - name: gitrepositoryurl
+    value: $(body.repository.url)
+
+---
+
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: tekton-argocd-habsng-build-el
+spec:
+  serviceAccountName: tekton-triggers-admin
+  triggers:
+  - bindings:
+    - ref: github-push-trigger-binding
+    template:
+      name: github-push-trigger-template
+
+---

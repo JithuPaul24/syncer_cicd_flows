@@ -1,0 +1,87 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  namespace: dev
+  name: springboot-gradle-kaniko1
+spec:
+  description: |
+    This pipeline clones a git repo, then echoes the README file to the stout.
+  params:
+  - name: build-version
+    type: string
+    default: "1.0.0"
+  - name: gitrepositoryurl
+    type: string
+    description: The git repo URL to clone from.
+  - name: gitrevision
+    type: string
+    description: Revision to checkout. (branch, tag, sha, ref, etc...)
+  - name: GRADLE_IMAGE
+    type: string
+    description: Specify the gradle image which is used to build the project
+  - name: DOCKER_IMAGE
+    type: string
+    description: Specify the container image name to be created
+  workspaces:
+  - name: shared-data
+    description: |
+      This workspace contains the cloned repo files, so they can be read by the
+      next task.
+  - name: dockerconfig
+  tasks:
+  - name: get-build-id
+    taskRef:
+      name: generate-build-id
+    params:
+      - name: build-version
+        value: $(params.build-version)
+  - name: fetch-source
+    taskRef:
+      name: git-clone
+    runAfter:
+      - "get-build-id"
+    workspaces:
+    - name: output
+      workspace: shared-data
+    params:
+    - name: url
+      value: $(params.gitrepositoryurl)
+    - name: revision
+      value: $(params.gitrevision)
+  - name: gradlebuild
+    taskRef:
+      name: gradle
+    runAfter:
+      - "fetch-source"
+    params:
+      - name: TASKS
+        value:
+          - "build"
+          - "-Pversion=$(tasks.get-build-id.results.build-id)"
+      - name: GRADLE_IMAGE
+        value: $(params.GRADLE_IMAGE)
+    workspaces:
+     - name: source
+       workspace: shared-data
+  - name: kaniko-build
+    taskRef:
+      name: kaniko
+    runAfter:
+      - "gradlebuild"
+    params:
+      - name: DOCKERFILE
+        value: Dockerfile
+      - name: CONTEXT
+        value: ./
+      - name: IMAGE
+        value: "$(params.DOCKER_IMAGE):$(tasks.get-build-id.results.build-id)"
+      - name: EXTRA_ARGS
+        value:
+           - --build-arg
+           - JAR_FILE=build/libs/catalog-service-$(tasks.get-build-id.results.build-id).jar
+    workspaces:
+      - name: source
+        workspace: shared-data
+      - name: dockerconfig
+        workspace: dockerconfig
+

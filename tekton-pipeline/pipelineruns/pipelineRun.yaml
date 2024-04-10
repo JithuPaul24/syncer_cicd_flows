@@ -1,0 +1,33 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  namespace: dev
+  generateName: springboot-gradlerun-
+spec:
+  serviceAccountName: build-bot
+  pipelineRef:
+    name: springboot-gradle-kaniko1
+  podTemplate:
+    securityContext:
+      fsGroup: 65532
+  workspaces:
+  - name: shared-data
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  - name: dockerconfig
+    secret:
+      secretName: dockerhub-secret
+  params:
+  - name: gitrepositoryurl
+    value: https://github.com/JithuPaul24/mypoc.git
+  - name: gitrevision
+    value: main
+  - name: GRADLE_IMAGE
+    value: gradle:8.6.0-jdk21
+  - name: DOCKER_IMAGE
+    value: "jithupaul24/springboot-poc"
